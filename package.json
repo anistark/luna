@@ -1,6 +1,6 @@
 {
   "name": "luna-ipfs",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "typings": "dist/index.d.ts",
