@@ -1,5 +1,7 @@
 # Luna ☾
 
+![luna](https://github.com/user-attachments/assets/8e8a669c-3e04-4d76-8cb8-2f2308b0c2f0)
+
 A TypeScript SDK for uploading files & directories to IPFS using Helia.
 
 ## Dev
