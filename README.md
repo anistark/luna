@@ -113,4 +113,10 @@ npm run test:dev
 make release level=patch
 ```
 
+with debug
+
+```sh
+make release level=patch DEBUG=true
+```
+
 **⚠️ Under Development ⚠️**
