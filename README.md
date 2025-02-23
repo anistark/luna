@@ -107,4 +107,10 @@ npm run test:dev
 
 ---
 
+## Maintainer
+
+```sh
+make release level=patch
+```
+
 **⚠️ Under Development ⚠️**
