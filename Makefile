@@ -1,71 +1,72 @@
-# Define variables
+# Variables
 PKG_NAME = luna-ipfs
-NPM_REGISTRY = https://registry.npmjs.org/
-VERSION = $(shell node -p "require('./package.json').version")
-GITHUB_REPO = anistark/luna-ipfs
+LEVEL ?= patch  # Default version bump level (patch/minor/major)
+DEBUG ?= false  # Enable debug mode (true/false)
 
-# Default target
-.PHONY: all
-all: build
+# Debug flag
+ifeq ($(DEBUG), true)
+    VERBOSE_FLAG = --loglevel verbose
+else
+    VERBOSE_FLAG =
+endif
+
+# Show current version
+.PHONY: version
+version:
+	@npm version --json | jq -r '.["$(PKG_NAME)"]'
 
 # Install dependencies
 .PHONY: install
 install:
-	npm install
+	@echo "Installing dependencies..."
+	@npm install $(VERBOSE_FLAG)
 
-# Build the package
+# Run build process
 .PHONY: build
 build:
-	rm -rf dist
-	npm run build
+	@echo "Building package..."
+	@npm run build $(VERBOSE_FLAG)
 
 # Run tests
 .PHONY: test
 test:
-	npm run test
+	@echo "Running tests..."
+	@npm test $(VERBOSE_FLAG)
 
-# Lint the code
-.PHONY: lint
-lint:
-	npm run lint
-
-# Bump the version (patch, minor, major)
-.PHONY: version
-version:
-	@echo "Usage: make version level=patch|minor|major"
-	npm version $(level)
-
-# Publish to npm
-.PHONY: publish
-publish: build test
-	npm publish --access public
-
-# Create a GitHub release linked to the npm version
-.PHONY: github-release
-github-release:
-	@echo "Creating GitHub Release for v$(VERSION)..."
-	git tag v$(VERSION)
-	git push origin v$(VERSION)
-	gh release create v$(VERSION) --title "Release v$(VERSION)" --notes "New version v$(VERSION) published to npm 🚀. View it here: [npm $(PKG_NAME)](https://www.npmjs.com/package/$(PKG_NAME))"
-
-# Clean build files
+# Clean up generated files
 .PHONY: clean
 clean:
-	rm -rf node_modules dist package-lock.json
+	@echo "Cleaning up..."
+	@rm -rf dist node_modules
 
-# Reinstall dependencies
-.PHONY: reinstall
-reinstall: clean install
-
-# Release workflow (bump version, build, test, publish, GitHub release)
+# Create a new release
 .PHONY: release
 release:
-	@echo "Usage: make release level=patch|minor|major"
-	npm version $(level)
-	$(MAKE) publish
-	$(MAKE) github-release
+	@echo "Checking Git status..."
+	@git status
+	@if ! git diff-index --quiet HEAD --; then \
+		echo "❌ ERROR: Git working directory is not clean. Commit or stash changes before releasing."; \
+		exit 1; \
+	fi
+	@echo "Bumping version ($(LEVEL))..."
+	@npm version $(LEVEL) $(VERBOSE_FLAG)
+	@git push --follow-tags
+	@echo "Publishing to npm..."
+	@npm publish $(VERBOSE_FLAG)
+	@echo "Creating GitHub release..."
+	@gh release create $(shell git describe --tags) --title "Release $(shell git describe --tags)" --notes "New release of $(PKG_NAME)"
 
-# Run example usage script
-.PHONY: example
-example:
-	npx ts-node examples/upload-example.ts
+# Help message
+.PHONY: help
+help:
+	@echo "Available commands:"
+	@echo "  make install   - Install dependencies"
+	@echo "  make build     - Build the package"
+	@echo "  make test      - Run tests"
+	@echo "  make clean     - Clean up generated files"
+	@echo "  make version   - Show the current version"
+	@echo "  make release   - Create a new release (level=patch/minor/major)"
+	@echo "  make help      - Show this help message"
+	@echo ""
+	@echo "To enable debug mode, run: make release DEBUG=true"
+
