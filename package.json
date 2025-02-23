@@ -3,9 +3,10 @@
   "version": "0.0.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "jest --config jest.config.ts",
+    "test": "jest --config jest.config.ts --passWithNoTests",
     "test:dev": "ts-mocha tests/test.ts",
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
