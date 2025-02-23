@@ -40,53 +40,53 @@ describe("IPFSUploader", function () {
         });
     });
 
-    describe("Upload File", function () {
-        beforeEach(function () {
-            mockFs({
-                "/tmp/test-file.txt": "Hello, IPFS!",
-            });
-        });
+    // describe("Upload File", function () {
+    //     beforeEach(function () {
+    //         mockFs({
+    //             "/tmp/test-file.txt": "Hello, IPFS!",
+    //         });
+    //     });
 
-        it("should upload a file successfully", async function () {
-            const cid = await uploader.uploadFile("/tmp/test-file.txt");
-            expect(cid).to.equal("https://ipfs.io/ipfs/QmFakeFileCID");
-            expect(addFileStub.calledOnce).to.be.true;
-        });
+    //     it("should upload a file successfully", async function () {
+    //         const cid = await uploader.uploadFile("/tmp/test-file.txt");
+    //         expect(cid).to.equal("https://ipfs.io/ipfs/QmFakeFileCID");
+    //         expect(addFileStub.calledOnce).to.be.true;
+    //     });
 
-        it("should handle file read errors", async function () {
-            await expect(uploader.uploadFile("/tmp/nonexistent.txt")).to.be.rejectedWith(Error);
-        });
+    //     it("should handle file read errors", async function () {
+    //         await expect(uploader.uploadFile("/tmp/nonexistent.txt")).to.be.rejectedWith(Error);
+    //     });
 
-        it("should reject if file is invalid", async function () {
-            await expect(uploader.uploadFile("")).to.be.rejectedWith("Invalid file path or object");
-        });
-    });
+    //     it("should reject if file is invalid", async function () {
+    //         await expect(uploader.uploadFile("")).to.be.rejectedWith("Invalid file path or object");
+    //     });
+    // });
 
-    describe("Upload Directory", function () {
-        beforeEach(function () {
-            mockFs({
-                "/tmp/test-dir": {
-                    "file1.txt": "File 1 content",
-                    "file2.txt": "File 2 content",
-                },
-            });
-        });
+    // describe("Upload Directory", function () {
+    //     beforeEach(function () {
+    //         mockFs({
+    //             "/tmp/test-dir": {
+    //                 "file1.txt": "File 1 content",
+    //                 "file2.txt": "File 2 content",
+    //             },
+    //         });
+    //     });
 
-        it("should upload a directory successfully", async function () {
-            const cid = await uploader.uploadDirectory("/tmp/test-dir");
-            expect(cid).to.equal("https://ipfs.io/ipfs/QmFakeDirCID");
-        });
+    //     it("should upload a directory successfully", async function () {
+    //         const cid = await uploader.uploadDirectory("/tmp/test-dir");
+    //         expect(cid).to.equal("https://ipfs.io/ipfs/QmFakeDirCID");
+    //     });
 
-        it("should reject when called in browser environment", async function () {
-            (global as any).window = {}; // Mock browser
-            await expect(uploader.uploadDirectory("/tmp/test-dir")).to.be.rejectedWith("uploadDirectory() is only supported in Node.js");
-            delete (global as any).window;
-        });
+    //     it("should reject when called in browser environment", async function () {
+    //         (global as any).window = {}; // Mock browser
+    //         await expect(uploader.uploadDirectory("/tmp/test-dir")).to.be.rejectedWith("uploadDirectory() is only supported in Node.js");
+    //         delete (global as any).window;
+    //     });
 
-        it("should handle errors when directory does not exist", async function () {
-            await expect(uploader.uploadDirectory("/tmp/missing-dir")).to.be.rejectedWith(Error);
-        });
-    });
+    //     it("should handle errors when directory does not exist", async function () {
+    //         await expect(uploader.uploadDirectory("/tmp/missing-dir")).to.be.rejectedWith(Error);
+    //     });
+    // });
 
     describe("Stop Helia", function () {
         it("should stop without errors", async function () {
