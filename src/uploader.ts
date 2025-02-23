@@ -108,7 +108,28 @@ export class IPFSUploader {
         await this.cleanup();
         return `https://ipfs.io/ipfs/${lastCID.cid.toString()}/`;
     }
-    
+
+    /**
+     * Fetches a file from IPFS using its CID
+     * @param cid - Content Identifier (CID) of the file
+     * @returns File content as a Buffer (Node.js) or Blob (Browser)
+     */
+    async fetchFile(cid: string): Promise<Buffer | Blob> {
+        await this.init();
+        const fileChunks = [];
+        
+        for await (const chunk of this.fsHelia.cat(cid)) {
+            fileChunks.push(chunk);
+        }
+
+        const fileBuffer = Buffer.concat(fileChunks);
+
+        if (isNode) {
+            return fileBuffer; // Return as Buffer in Node.js
+        } else {
+            return new Blob([fileBuffer]); // Return as Blob in Browser
+        }
+    }
 
     async cleanup(): Promise<void> {
         if (isNode && this.storagePath) {

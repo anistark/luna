@@ -12,13 +12,17 @@ async function Test() {
         // Initialize IPFSUploader (adjust config if needed)
         const uploader = new IPFSUploader();
 
-        console.log('Uploading single image...');
-        const imageCID = await uploader.uploadFile(imagePath);
-        console.log(`Image uploaded to IPFS: ${imageCID}`);
+        // console.log('Uploading single image...');
+        // const imageCID = await uploader.uploadFile(imagePath);
+        // console.log(`Image uploaded to IPFS: ${imageCID}`);
 
-        console.log('Uploading entire folder...');
-        const folderCID = await uploader.uploadDirectory(folderPath);
-        console.log(`Folder uploaded to IPFS: ${folderCID}`);
+        // console.log('Uploading entire folder...');
+        // const folderCID = await uploader.uploadDirectory(folderPath);
+        // console.log(`Folder uploaded to IPFS: ${folderCID}`);
+
+        const cid = "bafkreia6t4ikkp4gvn5cj4nv7bmlfv74iaypxwqsbnv3usatjexb7tquoy";
+        const buffer = await uploader.fetchFile(cid);
+        console.log("File retrieved from IPFS:", buffer.toString());
 
         process.exit(0);
     } catch (error) {
