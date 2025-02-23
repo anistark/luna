@@ -2,27 +2,30 @@ import { createHelia } from 'helia';
 import { unixfs } from '@helia/unixfs';
 import { FsBlockstore } from 'blockstore-fs';
 import { MemoryBlockstore } from 'blockstore-core';
+import os from 'os';
+import fs from 'fs/promises';
+import path from 'path';
 
 const isNode = typeof window === 'undefined';
 
 export class IPFSUploader {
     private helia: any;
     private fsHelia: any;
+    private storagePath: string;
 
-    constructor(private storagePath: string = './ipfs-blocks') {
+    constructor() {
         this.helia = null;
         this.fsHelia = null;
+        this.storagePath = isNode ? path.join(os.tmpdir(), 'ipfs-blocks') : '';
     }
 
-    /**
-     * Initializes Helia with appropriate storage
-     */
     async init(): Promise<void> {
         if (!this.helia) {
+            await fs.mkdir(this.storagePath, { recursive: true }); // Create temp dir if needed
             const blockstore = isNode ? new FsBlockstore(this.storagePath) : new MemoryBlockstore();
             this.helia = await createHelia({ blockstore });
             this.fsHelia = unixfs(this.helia);
-            console.log("🚀 Helia initialized!", isNode ? `Storage: ${this.storagePath}` : "Running in Browser (Memory)");
+            console.log("🌙 Luna initialized!", isNode ? `Storage: ${this.storagePath}` : "Running in Browser (Memory)");
         }
     }
 
@@ -33,17 +36,20 @@ export class IPFSUploader {
      */
     async uploadFile(file: string | File): Promise<string> {
         await this.init();
-
         let fileBuffer: Uint8Array;
-
+    
         if (isNode) {
-            const fs = await import('fs');
-            fileBuffer = new Uint8Array(fs.readFileSync(file as string));
+            const fs = await import('fs/promises');
+            fileBuffer = new Uint8Array(await fs.readFile(file as string));
         } else {
             fileBuffer = new Uint8Array(await (file as File).arrayBuffer());
         }
-
-        const cid = await this.fsHelia.addFile(fileBuffer);
+    
+        if (fileBuffer.length === 0) {
+            throw new Error("File is empty, cannot upload.");
+        }
+    
+        const cid = await this.fsHelia.addBytes(fileBuffer);
         return `https://ipfs.io/ipfs/${cid.toString()}`;
     }
 
@@ -56,42 +62,71 @@ export class IPFSUploader {
         if (!isNode) {
             throw new Error("uploadDirectory() is only supported in Node.js");
         }
-
+    
         await this.init();
-        const fs = await import('fs');
-        const path = await import('path');
-
+    
         async function* getFilesRecursively(dir: string): AsyncIterable<{ path: string; content: Uint8Array }> {
-            const files = fs.readdirSync(dir);
+            const files = await fs.readdir(dir);
             for (const file of files) {
                 const filePath = path.join(dir, file);
-                const stat = fs.statSync(filePath);
-
+                const stat = await fs.stat(filePath);
+    
                 if (stat.isDirectory()) {
                     yield* getFilesRecursively(filePath);
                 } else {
-                    yield { path: filePath.replace(dir, ''), content: new Uint8Array(fs.readFileSync(filePath)) };
+                    yield {
+                        path: filePath.replace(dirPath, '').replace(/^\/+/, ''), // Ensure relative paths
+                        content: new Uint8Array(await fs.readFile(filePath))
+                    };
                 }
             }
         }
-
-        const files = [];
+    
+        const files: { path: string; content: Uint8Array }[] = [];
         for await (const file of getFilesRecursively(dirPath)) {
             files.push(file);
         }
+    
+        if (files.length === 0) {
+            throw new Error("No files found in directory.");
+        }
+    
+        const cidIterator = this.fsHelia.addAll(files.map(file => ({
+            path: file.path,
+            content: file.content
+        })));
+    
+        let lastCID = null;
+        for await (const cid of cidIterator) {
+            lastCID = cid;
+        }
+    
+        if (!lastCID) {
+            throw new Error("Failed to retrieve CID for the uploaded directory.");
+        }
+    
+        await this.cleanup();
+        return `https://ipfs.io/ipfs/${lastCID.cid.toString()}/`;
+    }
+    
 
-        const rootCID = await this.fsHelia.addDirectory(files);
-        return `https://ipfs.io/ipfs/${rootCID.toString()}/`;
+    async cleanup(): Promise<void> {
+        if (isNode && this.storagePath) {
+            try {
+                await fs.rm(this.storagePath, { recursive: true, force: true });
+                console.log("🗑️ Cleaned up temp storage:", this.storagePath);
+            } catch (err) {
+                console.error("⚠️ Error cleaning up temp storage:", err);
+            }
+        }
     }
 
-    /**
-     * Stops Helia instance
-     */
     async stop(): Promise<void> {
         if (this.helia) {
             await this.helia.stop();
             console.log("🛑 Helia instance stopped.");
         }
+        await this.cleanup(); // Cleanup temp storage on stop
     }
 }
 

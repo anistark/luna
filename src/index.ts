@@ -1,4 +1,4 @@
-import IPFSUploader from './uploader';
+import IPFSUploader from './uploader.js';
 
 export { IPFSUploader };
 export default IPFSUploader;

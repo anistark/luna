@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
-      "target": "es6",
-      "module": "CommonJS",
-      "outDir": "./dist",
-      "strict": true,
-      "esModuleInterop": true,
-      "declaration": true,
-      "skipLibCheck": true,
-      "forceConsistentCasingInFileNames": true,
-      "noEmit": false
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false
   },
-  "include": ["./src", "tests"],
+  "include": ["./src/**/*", "./tests/**/*"],
   "exclude": ["node_modules"]
 }

@@ -1,5 +1,5 @@
 'use strict';
-import { IPFSUploader } from '../src/index';
+import { IPFSUploader } from '../src/uploader.js';
 import path from 'path';
 import os from 'os';
 
@@ -19,7 +19,8 @@ async function Test() {
         console.log('Uploading entire folder...');
         const folderCID = await uploader.uploadDirectory(folderPath);
         console.log(`Folder uploaded to IPFS: ${folderCID}`);
-        
+
+        process.exit(0);
     } catch (error) {
         console.error('Error during IPFS upload:', error);
     }
