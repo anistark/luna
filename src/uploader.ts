@@ -5,6 +5,7 @@ import { MemoryBlockstore } from 'blockstore-core';
 import os from 'os';
 import fs from 'fs/promises';
 import path from 'path';
+import { CID } from 'multiformats/cid';
 
 const isNode = typeof window === 'undefined';
 
@@ -12,11 +13,13 @@ export class IPFSUploader {
     private helia: any;
     private fsHelia: any;
     private storagePath: string;
+    private apiUrl: string | null;
 
-    constructor() {
+    constructor(apiUrl?: string) {
         this.helia = null;
         this.fsHelia = null;
         this.storagePath = isNode ? path.join(os.tmpdir(), 'ipfs-blocks') : '';
+        this.apiUrl = apiUrl || null;
     }
 
     async init(): Promise<void> {
@@ -25,7 +28,8 @@ export class IPFSUploader {
             const blockstore = isNode ? new FsBlockstore(this.storagePath) : new MemoryBlockstore();
             this.helia = await createHelia({ blockstore });
             this.fsHelia = unixfs(this.helia);
-            console.log("🌙 Luna initialized!", isNode ? `Storage: ${this.storagePath}` : "Running in Browser (Memory)");
+            // console.log("🌙 Luna initialised!", isNode ? `Storage: ${this.storagePath}` : "Running in Browser (Memory)");
+            console.log("🌙 Luna initialised!");
         }
     }
 
@@ -44,12 +48,16 @@ export class IPFSUploader {
         } else {
             fileBuffer = new Uint8Array(await (file as File).arrayBuffer());
         }
-    
+        // console.log('fileBuffer:', fileBuffer);
         if (fileBuffer.length === 0) {
             throw new Error("File is empty, cannot upload.");
         }
-    
         const cid = await this.fsHelia.addBytes(fileBuffer);
+        console.log("cid:", cid);
+        await this.cleanup();
+        // Pin the CID to ensure it remains accessible
+        const pinned = await this.pinCID(cid.toString());
+        console.log('pinned:', pinned);
         return `https://ipfs.io/ipfs/${cid.toString()}`;
     }
 
@@ -104,8 +112,10 @@ export class IPFSUploader {
         if (!lastCID) {
             throw new Error("Failed to retrieve CID for the uploaded directory.");
         }
-    
         await this.cleanup();
+        // Pin the CID to ensure it remains accessible
+        const pinned = await this.pinCID(lastCID.cid);
+        console.log('pinned:', pinned);
         return `https://ipfs.io/ipfs/${lastCID.cid.toString()}/`;
     }
 
@@ -114,21 +124,32 @@ export class IPFSUploader {
      * @param cid - Content Identifier (CID) of the file
      * @returns File content as a Buffer (Node.js) or Blob (Browser)
      */
-    async fetchFile(cid: string): Promise<Buffer | Blob> {
+    async fetchFile(cid: string): Promise<Buffer | Blob | any> {
         await this.init();
-        const fileChunks = [];
+        // const fileChunks = [];
         
+        // for await (const chunk of this.fsHelia.cat(cid)) {
+        //     fileChunks.push(chunk);
+        // }
+
+        // const fileBuffer = Buffer.concat(fileChunks);
+
+        // if (isNode) {
+        //     return fileBuffer; // Return as Buffer in Node.js
+        // } else {
+        //     return new Blob([fileBuffer]); // Return as Blob in Browser
+        // }
+        const decoder = new TextDecoder()
+        let text = ''
+
         for await (const chunk of this.fsHelia.cat(cid)) {
-            fileChunks.push(chunk);
+        text += decoder.decode(chunk, {
+            stream: true
+        })
         }
 
-        const fileBuffer = Buffer.concat(fileChunks);
-
-        if (isNode) {
-            return fileBuffer; // Return as Buffer in Node.js
-        } else {
-            return new Blob([fileBuffer]); // Return as Blob in Browser
-        }
+        console.log('Added file contents:', text)
+        return;
     }
 
     async cleanup(): Promise<void> {
@@ -148,6 +169,48 @@ export class IPFSUploader {
             console.log("🛑 Helia instance stopped.");
         }
         await this.cleanup(); // Cleanup temp storage on stop
+    }
+
+    async pinCID(cid: string): Promise<boolean | string> {
+        try {
+            // Validate CID format
+            if (!CID.parse(cid)) {
+                return "Invalid CID format.";
+            }
+    
+            // Check if Helia supports pinning
+            if (!this.fsHelia.pin) {
+                return "Pin API is not available in Helia.";
+            }
+    
+            // Pin the CID
+            await this.fsHelia.pin.add(CID.parse(cid));
+            console.log(`Successfully pinned CID: ${cid}`);
+            return true;
+        } catch (error: any) {
+            console.error(`Error pinning CID: ${cid}`, error);
+            return `Error: ${error.message || error}`;
+        }
+    }
+
+    async pinCIDViaAPI(cid: string): Promise<boolean | string> {
+        if (!this.apiUrl) {
+            console.warn("Pinning is disabled because no API URL was provided.");
+            return false;
+        }
+        try {
+            const response = await fetch(`${this.apiUrl}/pin/add?arg=${cid}`, { method: 'POST' });
+    
+            if (!response.ok) {
+                return `Failed to pin CID. Status: ${response.status}`;
+            }
+    
+            console.log(`Successfully pinned CID: ${cid}`);
+            return true;
+        } catch (error: any) {
+            console.error(`Error pinning CID: ${cid}`, error);
+            return `Error: ${error.message || error}`;
+        }
     }
 }
 

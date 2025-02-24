@@ -11,8 +11,10 @@
 - File Upload
     - ✅ NodeJs (Backend)
     - ✅ Browser (React, NextJs, etc.)
+    - ✅ Pinning via remote URL
 - Folder Upload
     - ✅ NodeJs (Backend)
+    - ✅ Pinning via remote URL
 - Fetch File
     - ✅ NodeJs (Backend)
     - ✅ Browser (React, NextJs, etc.)
@@ -36,9 +38,11 @@ or similar for `pnpm`, `bun`, etc.
 ```ts
 import IPFSUploader from "luna-ipfs";
 
-const uploader = new IPFSUploader(); // Uses default storage path "./ipfs-blocks" in /var/folders
+const uploader = new IPFSUploader();
 await uploader.init(); // Initialize Luna
 ```
+
+_Uses default storage path `"./ipfs-blocks"` in `/var/folders`_
 
 ### Upload a File
 #### **Node.js**
